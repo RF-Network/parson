@@ -1,0 +1,25 @@
+set(CMAKE_SYSTEM_NAME Generic)
+set(CMAKE_SYSTEM_PROCESSOR ARM)
+set(CMAKE_CROSSCOMPILING 1)
+set(CMAKE_C_COMPILER_WORKS 1)
+set(CMAKE_CXX_COMPILER_WORKS 1)
+
+if(MINGW OR CYGWIN OR WIN32)
+    set(UTIL_SEARCH_CMD where)
+elseif(UNIX OR APPLE)
+    set(UTIL_SEARCH_CMD which)
+endif()
+
+set(QAPI_FLAGS "-DQAPI_TXM_MODULE -DTXM_MODULE -DTX_DAM_QC_CUSTOMIZATIONS -DTX_ENABLE_PROFILING -DTX_ENABLE_EVENT_TRACE -DTX_DISABLE_NOTIFY_CALLBACKS -DFX_FILEX_PRESENT -DTX_ENABLE_IRQ_NESTING -DTX3_CHANGES")
+set(ENV{TOOLCHAIN_PATH} "C:/compile_tools/LLVM/4.0.3")
+set(CMAKE_C_COMPILER "$ENV{TOOLCHAIN_PATH}/bin/clang.exe")
+set(CMAKE_CXX_COMPILER "$ENV{TOOLCHAIN_PATH}/bin/clang++.exe")
+
+include_directories("$ENV{TOOLCHAIN_PATH}/armv7m-none-eabi/libc/include")
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -marm -target armv7m-none-musleabi -mfloat-abi=softfp -mfpu=none -mcpu=cortex-a7 -mno-unaligned-access  -fms-extensions -Osize -fshort-enums -fsigned-char -Wbuiltin-macro-redefined ${QAPI_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${QAPI_FLAGS}")
+
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)

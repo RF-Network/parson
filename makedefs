@@ -1,0 +1,4 @@
+COMPILER_C_TOOL = ${LLVM_COMPILER}/bin/clang
+COMPILER_CXX_TOOL = ${LLVM_COMPILER}/bin/clang++
+COMPILER_INCL = ${LLVM_COMPILER}/armv7m-none-eabi/libc/include
+ARCHIVER_TOOL = ${LLVM_COMPILER}/bin/llvm-ar
