@@ -46,6 +46,7 @@
 #include <ctype.h>
 #include <math.h>
 #include <errno.h>
+#include <qapi_fs.h>
 
 /* Apparently sscanf is not implemented in some "standard" libraries, so don't use it, if you
  * don't have to. */
@@ -201,34 +202,40 @@ static int json_serialize_string(const char *string, size_t len, char *buf);
 
 /* Various */
 static char * read_file(const char * filename) {
-    FILE *fp = fopen(filename, "r");
+    qapi_FS_Status_t status = QAPI_OK;
+    int fd = -1;
+
+    status = qapi_FS_Open(filename, QAPI_FS_O_RDONLY_E, &fd);
+    if ((status != QAPI_OK) || (-1 == fd))
+        return NULL;
+
     size_t size_to_read = 0;
     size_t size_read = 0;
     long pos;
-    char *file_contents;
-    if (!fp) {
-        return NULL;
-    }
-    fseek(fp, 0L, SEEK_END);
-    pos = ftell(fp);
+    char* file_contents;
+
+    status = qapi_FS_Seek(fd, 0, QAPI_FS_SEEK_END_E, &pos);
     if (pos < 0) {
-        fclose(fp);
+        qapi_FS_Close(fd);
         return NULL;
     }
+
     size_to_read = pos;
-    rewind(fp);
+    qapi_FS_Seek(fd, 0, QAPI_FS_SEEK_SET_E, &pos);
     file_contents = (char*)parson_malloc(sizeof(char) * (size_to_read + 1));
+
     if (!file_contents) {
-        fclose(fp);
+        qapi_FS_Close(fd);
         return NULL;
     }
-    size_read = fread(file_contents, 1, size_to_read, fp);
-    if (size_read == 0 || ferror(fp)) {
-        fclose(fp);
+
+    qapi_FS_Read(fd, file_contents, size_to_read, &size_read);
+    if (size_read == 0) {
+        qapi_FS_Close(fd);
         parson_free(file_contents);
         return NULL;
     }
-    fclose(fp);
+    qapi_FS_Close(fd);
     file_contents[size_read] = '\0';
     return file_contents;
 }
@@ -1796,22 +1803,32 @@ JSON_Status json_serialize_to_buffer(const JSON_Value *value, char *buf, size_t 
 
 JSON_Status json_serialize_to_file(const JSON_Value *value, const char *filename) {
     JSON_Status return_code = JSONSuccess;
-    FILE *fp = NULL;
-    char *serialized_string = json_serialize_to_string(value);
+    qapi_FS_Status_t status = QAPI_OK;
+    uint32_t bytes_written;
+    int fd = -1;
+
+    char* serialized_string = json_serialize_to_string(value);
     if (serialized_string == NULL) {
         return JSONFailure;
     }
-    fp = fopen(filename, "w");
-    if (fp == NULL) {
+
+    status = qapi_FS_Open(filename, QAPI_FS_O_WRONLY_E | QAPI_FS_O_CREAT_E, &fd);
+    if ((status != QAPI_OK) || (-1 == fd))
+    {
         json_free_serialized_string(serialized_string);
         return JSONFailure;
     }
-    if (fputs(serialized_string, fp) == EOF) {
+
+    qapi_FS_Write(fd, serialized_string, strlen(serialized_string), &bytes_written);
+    if (bytes_written != strlen(serialized_string)) {
         return_code = JSONFailure;
     }
-    if (fclose(fp) == EOF) {
+
+    status = qapi_FS_Close(fd);
+    if (status != QAPI_OK) {
         return_code = JSONFailure;
     }
+
     json_free_serialized_string(serialized_string);
     return return_code;
 }
@@ -1856,22 +1873,32 @@ JSON_Status json_serialize_to_buffer_pretty(const JSON_Value *value, char *buf, 
 
 JSON_Status json_serialize_to_file_pretty(const JSON_Value *value, const char *filename) {
     JSON_Status return_code = JSONSuccess;
-    FILE *fp = NULL;
-    char *serialized_string = json_serialize_to_string_pretty(value);
+    qapi_FS_Status_t status = QAPI_OK;
+    uint32_t bytes_written;
+    int fd = -1;
+
+    char* serialized_string = json_serialize_to_string_pretty(value);
     if (serialized_string == NULL) {
         return JSONFailure;
     }
-    fp = fopen(filename, "w");
-    if (fp == NULL) {
+
+    status = qapi_FS_Open(filename, QAPI_FS_O_WRONLY_E | QAPI_FS_O_CREAT_E, &fd);
+    if ((status != QAPI_OK) || (-1 == fd))
+    {
         json_free_serialized_string(serialized_string);
         return JSONFailure;
     }
-    if (fputs(serialized_string, fp) == EOF) {
+
+    qapi_FS_Write(fd, serialized_string, strlen(serialized_string), &bytes_written);
+    if (bytes_written != strlen(serialized_string)) {
         return_code = JSONFailure;
     }
-    if (fclose(fp) == EOF) {
+
+    status = qapi_FS_Close(fd);
+    if (status != QAPI_OK) {
         return_code = JSONFailure;
     }
+
     json_free_serialized_string(serialized_string);
     return return_code;
 }
